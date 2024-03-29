@@ -36,8 +36,9 @@ type Message struct {
 type Chat struct {
 	cookie string
 	sign   string
-	Auth   string
-	ApiKey string
+	auth   string
+	key    string
+	user   string
 	opts   Options
 }
 
@@ -49,12 +50,13 @@ type Options struct {
 	DangerousContent int8
 }
 
-func New(cookie, sign, auth, apiKey string, opts Options) Chat {
+func New(cookie, sign, auth, key, user string, opts Options) Chat {
 	return Chat{
 		cookie: cookie,
 		sign:   sign,
-		Auth:   auth,
-		ApiKey: apiKey,
+		auth:   auth,
+		key:    key,
+		user:   user,
 		opts:   opts,
 	}
 }
@@ -76,14 +78,14 @@ func (c *Chat) Reply(ctx context.Context, query string) (chan string, error) {
 		URL(fmt.Sprintf("%s/%s", BaseURL, "GenerateContent")).
 		Context(ctx).
 		Method(http.MethodPost).
-		Header("authorization", "SAPISIDHASH "+c.Auth).
+		Header("authorization", "SAPISIDHASH "+c.auth).
 		Header("content-type", "application/json+protobuf").
 		Header("cookie", c.cookie).
 		Header("origin", "https://aistudio.google.com").
 		Header("referer", "https://aistudio.google.com/").
 		Header("user-agent", userAgent).
-		Header("x-goog-api-key", c.ApiKey).
-		Header("x-goog-authuser", "0").
+		Header("x-goog-api-key", c.key).
+		Header("x-goog-authuser", c.user).
 		Header("x-user-agent", "grpc-web-javascript/0.1").
 		SetBody(data).
 		Do()
