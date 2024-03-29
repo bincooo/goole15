@@ -217,7 +217,7 @@ func (c *Chat) resolve(ctx context.Context, response *http.Response, ch chan str
 }
 
 func findTex(raw []byte) []byte {
-	l := bytes.Index(raw, []byte("[[null,\""))
+	l := bytes.LastIndex(raw, []byte("[[null,\""))
 	if l >= 0 && bytes.HasSuffix(raw, []byte("\"]],")) {
 		return raw[l+8 : len(raw)-4]
 	}
@@ -250,7 +250,6 @@ func (b *BlockReader) ReadBlock() (line []byte, isPrefix bool, err error) {
 	}
 
 	if len(slice) == 0 {
-		isPrefix = true
 		return
 	}
 
