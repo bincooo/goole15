@@ -10,13 +10,14 @@ import (
 const (
 	sign   = "xxx"
 	auth   = "xxx"
-	apiKey = "xxx"
+	key    = "xxx"
+	user   = "0"
 	cookie = "xxx"
 )
 
 func TestChat(t *testing.T) {
 	opts := NewDefaultOptions("http://127.0.0.1:7890")
-	chat := New(cookie, sign, auth, apiKey, opts)
+	chat := New(cookie, sign, auth, key, user, opts)
 	timeout, withTimeout := context.WithTimeout(context.Background(), 120*time.Second)
 	defer withTimeout()
 

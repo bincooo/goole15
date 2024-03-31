@@ -163,7 +163,7 @@ func (c *Chat) makeData(query string) interface{} {
 	}
 	data[3] = []interface{}{
 		nil,
-		[]string{"user:\n", "assistant:\n", "system:\n", "function:\n"},
+		[]string{},
 		nil,
 		8192,
 		2,
