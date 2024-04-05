@@ -9,7 +9,6 @@ import (
 	"github.com/bincooo/goole15/common"
 	"io"
 	"net/http"
-	"strings"
 )
 
 const (
@@ -38,7 +37,7 @@ type Chat struct {
 	sign   string
 	auth   string
 	key    string
-	user   string
+	u      string
 	opts   Options
 }
 
@@ -48,15 +47,20 @@ type Options struct {
 	HateSpeech       int8
 	SexuallyExplicit int8
 	DangerousContent int8
+	userAgent        string
 }
 
-func New(cookie, sign, auth, key, user string, opts Options) Chat {
+func (opt *Options) UA(userAgent string) {
+	opt.userAgent = userAgent
+}
+
+func New(cookie, sign, auth, key, u string, opts Options) Chat {
 	return Chat{
 		cookie: cookie,
 		sign:   sign,
 		auth:   auth,
 		key:    key,
-		user:   user,
+		u:      u,
 		opts:   opts,
 	}
 }
@@ -71,23 +75,28 @@ func NewDefaultOptions(proxies string) Options {
 	}
 }
 
-func (c *Chat) Reply(ctx context.Context, query string) (chan string, error) {
-	data := c.makeData(query)
+func (c *Chat) Reply(ctx context.Context, messages []Message) (chan string, error) {
+	payload := c.makePayload(messages)
+	ua := userAgent
+	if c.opts.userAgent != "" {
+		ua = c.opts.userAgent
+	}
+
 	response, err := common.New().
 		Proxies(c.opts.Proxies).
 		URL(fmt.Sprintf("%s/%s", BaseURL, "GenerateContent")).
 		Context(ctx).
 		Method(http.MethodPost).
-		Header("authorization", "SAPISIDHASH "+c.auth).
-		Header("content-type", "application/json+protobuf").
-		Header("cookie", c.cookie).
-		Header("origin", "https://aistudio.google.com").
-		Header("referer", "https://aistudio.google.com/").
-		Header("user-agent", userAgent).
-		Header("x-goog-api-key", c.key).
-		Header("x-goog-authuser", c.user).
-		Header("x-user-agent", "grpc-web-javascript/0.1").
-		SetBody(data).
+		Header("Authorization", "SAPISIDHASH "+c.auth).
+		Header("Content-Type", "application/json+protobuf").
+		Header("Cookie", c.cookie).
+		Header("Origin", "https://aistudio.google.com").
+		Header("Referer", "https://aistudio.google.com/").
+		Header("X-Goog-Api-Key", c.key).
+		Header("X-Goog-AuthUser", c.u).
+		Header("User-Agent", ua).
+		Header("X-User-Agent", "grpc-web-javascript/0.1").
+		SetBody(payload).
 		Do()
 	if err != nil {
 		return nil, err
@@ -102,39 +111,54 @@ func (c *Chat) Reply(ctx context.Context, query string) (chan string, error) {
 	return ch, nil
 }
 
-func MergeMessages(messages []Message) string {
-	if len(messages) == 0 {
-		return ""
-	}
-
-	buf := ""
-	lastRole := ""
-
-	for _, message := range messages {
-		if lastRole == "" || lastRole != message.Role {
-			lastRole = message.Role
-			buf += fmt.Sprintf("\n%s: %s%s", message.Role, tabs, strings.Join(strings.Split(message.Content, "\n"), tabs))
-			continue
-		}
-		buf += fmt.Sprintf("\n%s%s", tabs, strings.Join(strings.Split(message.Content, "\n"), tabs))
-	}
-
-	return strings.Join(strings.Split(buf, "\n"), tabs)
-}
-
-func (c *Chat) makeData(query string) interface{} {
+func (c *Chat) makePayload(messages []Message) interface{} {
 	data := make([]interface{}, 5)
 	data[0] = "models/gemini-1.5-pro-latest"
-	data[1] = []interface{}{
-		[]interface{}{
-			[]interface{}{
+	var parts []interface{}
+	for _, message := range messages {
+		switch message.Role {
+		case "user", "function":
+			parts = append(parts, []interface{}{
 				[]interface{}{
-					nil,
-					query,
+					[]interface{}{
+						nil,
+						message.Content,
+					},
 				},
-			},
-		},
+				"user",
+			})
+		case "assistant":
+			parts = append(parts, []interface{}{
+				[]interface{}{
+					[]interface{}{
+						nil,
+						message.Content,
+					},
+				},
+				"model",
+			})
+		case "system":
+			parts = append(parts, []interface{}{
+				[]interface{}{
+					[]interface{}{
+						nil,
+						message.Content,
+					},
+				},
+				"user",
+			})
+			parts = append(parts, []interface{}{
+				[]interface{}{
+					[]interface{}{
+						nil,
+						"Okay.",
+					},
+				},
+				"model",
+			})
+		}
 	}
+	data[1] = parts
 	data[2] = []interface{}{
 		[]interface{}{
 			nil,
@@ -163,12 +187,12 @@ func (c *Chat) makeData(query string) interface{} {
 	}
 	data[3] = []interface{}{
 		nil,
-		[]string{},
+		nil,
 		nil,
 		8192,
-		2,
-		0.4,
-		32,
+		1,
+		0.95,
+		100,
 	}
 	data[4] = c.sign
 	return data
