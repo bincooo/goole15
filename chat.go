@@ -48,7 +48,7 @@ type Options struct {
 	DangerousContent int8
 	userAgent        string
 
-	temperature float32 // 0.1 ~ 1.0
+	temperature float32 // 0.1 ~ ?
 	topP        float32 // 0.1 ~ 1.0
 	topK        int     // 40 ~ 100
 }
@@ -91,7 +91,7 @@ func NewDefaultOptions(proxies string) Options {
 }
 
 func (c *Chat) Reply(ctx context.Context, messages []Message) (chan string, error) {
-	if c.opts.temperature < 0.1 || c.opts.temperature > 1.0 {
+	if c.opts.temperature < 0.1 {
 		c.opts.temperature = 1.0
 	}
 	if c.opts.topP < 0.1 || c.opts.topP > 1.0 {
