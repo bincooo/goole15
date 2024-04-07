@@ -47,10 +47,26 @@ type Options struct {
 	SexuallyExplicit int8
 	DangerousContent int8
 	userAgent        string
+
+	temperature float32 // 0.1 ~ 1.0
+	topP        float32 // 0.1 ~ 1.0
+	topK        int     // 40 ~ 100
 }
 
 func (opt *Options) UA(userAgent string) {
 	opt.userAgent = userAgent
+}
+
+func (opt *Options) Temperature(value float32) {
+	opt.temperature = value
+}
+
+func (opt *Options) TopP(value float32) {
+	opt.topP = value
+}
+
+func (opt *Options) TopK(value int) {
+	opt.topK = value
 }
 
 func New(cookie, sign, auth, key, u string, opts Options) Chat {
@@ -75,6 +91,16 @@ func NewDefaultOptions(proxies string) Options {
 }
 
 func (c *Chat) Reply(ctx context.Context, messages []Message) (chan string, error) {
+	if c.opts.temperature < 0.1 || c.opts.temperature > 1.0 {
+		c.opts.temperature = 1.0
+	}
+	if c.opts.topP < 0.1 || c.opts.topP > 1.0 {
+		c.opts.topP = 0.95
+	}
+	if c.opts.topK < 40 || c.opts.topK > 100 {
+		c.opts.topK = 40
+	}
+
 	payload := c.makePayload(messages)
 	ua := userAgent
 	if c.opts.userAgent != "" {
@@ -189,9 +215,9 @@ func (c *Chat) makePayload(messages []Message) interface{} {
 		nil,
 		nil,
 		8192,
-		1,
-		0.95,
-		100,
+		c.opts.temperature,
+		c.opts.topP,
+		c.opts.topK,
 	}
 	data[4] = c.sign
 	return data
