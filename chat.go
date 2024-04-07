@@ -22,6 +22,7 @@ var (
 )
 
 const (
+	BLOCK_NONE = 4
 	BLOCK_FEW  = 3
 	BLOCK_SOME = 2
 	BLOCK_MOST = 1
@@ -68,10 +69,10 @@ func New(cookie, sign, auth, key, u string, opts Options) Chat {
 func NewDefaultOptions(proxies string) Options {
 	return Options{
 		Proxies:          proxies,
-		Harassment:       BLOCK_FEW,
-		HateSpeech:       BLOCK_FEW,
-		SexuallyExplicit: BLOCK_FEW,
-		DangerousContent: BLOCK_FEW,
+		Harassment:       BLOCK_NONE,
+		HateSpeech:       BLOCK_NONE,
+		SexuallyExplicit: BLOCK_NONE,
+		DangerousContent: BLOCK_NONE,
 	}
 }
 
@@ -93,7 +94,7 @@ func (c *Chat) Reply(ctx context.Context, messages []Message) (chan string, erro
 		Header("Origin", "https://aistudio.google.com").
 		Header("Referer", "https://aistudio.google.com/").
 		Header("X-Goog-Api-Key", c.key).
-		Header("X-Goog-AuthUser", c.u).
+		Header("X-Goog-Authuser", c.u).
 		Header("User-Agent", ua).
 		Header("X-User-Agent", "grpc-web-javascript/0.1").
 		SetBody(payload).
