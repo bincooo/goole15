@@ -140,49 +140,52 @@ func (c *Chat) makePayload(messages []Message) interface{} {
 	data := make([]interface{}, 5)
 	data[0] = "models/gemini-1.5-pro-latest"
 	var parts []interface{}
+
+	last := ""
+	buf := new(bytes.Buffer)
+
+	push := func(role, content string) {
+		if last == "" {
+			last = role
+			buf.WriteString(content)
+			return
+		}
+
+		if last == role {
+			buf.WriteString(content)
+			return
+		}
+
+		if buf.Len() == 0 {
+			last = role
+			return
+		}
+
+		parts = append(parts, []interface{}{
+			[]interface{}{
+				[]interface{}{
+					nil,
+					buf.String(),
+				},
+			},
+			last,
+		})
+
+		buf.Reset()
+		buf.WriteString(content)
+		last = role
+	}
+
 	for _, message := range messages {
 		switch message.Role {
-		case "user", "function":
-			parts = append(parts, []interface{}{
-				[]interface{}{
-					[]interface{}{
-						nil,
-						message.Content,
-					},
-				},
-				"user",
-			})
+		case "user", "function", "system":
+			push("user", message.Content)
 		case "assistant":
-			parts = append(parts, []interface{}{
-				[]interface{}{
-					[]interface{}{
-						nil,
-						message.Content,
-					},
-				},
-				"model",
-			})
-		case "system":
-			parts = append(parts, []interface{}{
-				[]interface{}{
-					[]interface{}{
-						nil,
-						message.Content,
-					},
-				},
-				"user",
-			})
-			parts = append(parts, []interface{}{
-				[]interface{}{
-					[]interface{}{
-						nil,
-						"Okay.",
-					},
-				},
-				"model",
-			})
+			push("model", message.Content)
 		}
 	}
+	push("end", "")
+
 	data[1] = parts
 	data[2] = []interface{}{
 		[]interface{}{

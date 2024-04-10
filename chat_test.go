@@ -40,6 +40,10 @@ func TestChat(t *testing.T) {
 			Content: "好的喵～ 主人你好喵♡～",
 		},
 		{
+			Role:    "assistant",
+			Content: "2222",
+		},
+		{
 			Role:    "user",
 			Content: "1+1=?",
 		},
